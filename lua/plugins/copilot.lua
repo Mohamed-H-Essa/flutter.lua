@@ -1,9 +1,4 @@
 return {
-  -- Enable the LazyVim Copilot extra
-  { import = "lazyvim.plugins.extras.ai.copilot" },
-  -- Enable the LazyVim Copilot Chat extra
-  { import = "lazyvim.plugins.extras.ai.copilot-chat" },
-
   -- Customize Copilot settings
   {
     "zbirenbaum/copilot.lua",
