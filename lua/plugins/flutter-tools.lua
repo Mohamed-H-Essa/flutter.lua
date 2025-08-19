@@ -1,7 +1,10 @@
 return {
   {
     "akinsho/flutter-tools.nvim",
-    dependencies = { "nvim-lua/plenary.nvim" },
+    dependencies = { 
+      "nvim-lua/plenary.nvim",
+      "folke/snacks.nvim", -- For better notifications
+    },
     cmd = {
       "FlutterRun",
       "FlutterDevices",
@@ -24,7 +27,7 @@ return {
     opts = {
       ui = {
         border = "rounded",
-        notification_style = "nvim-notify",
+        notification_style = "native", -- Use native vim.notify (snacks.nvim handles this in LazyVim)
       },
       decorations = {
         statusline = {
@@ -33,44 +36,29 @@ return {
           project_config = true,
         },
       },
-      debugger = {
-        enabled = true,
-        run_via_dap = true,
-        exception_breakpoints = {},
-        evaluate_to_string_in_debug_views = true,
-        register_configurations = function(paths)
-          -- Add custom debug configurations if needed
-          require("dap").configurations.dart = {
-            {
-              type = "dart",
-              request = "launch",
-              name = "Launch Flutter",
-              dartSdkPath = paths.dart_sdk,
-              flutterSdkPath = paths.flutter_sdk,
-              program = "${workspaceFolder}/lib/main.dart",
-              cwd = "${workspaceFolder}",
-              -- args = {"--flavor", "development"}
-            }
-          }
-        end,
-      },
       flutter_path = "/Users/mtech/development/flutter/bin/flutter", -- Explicit path to prevent duplication
       flutter_lookup_cmd = nil, -- Don't use lookup since we have explicit path
       root_patterns = { ".git", "pubspec.yaml" },
       fvm = false, -- Set to true if you use Flutter Version Management
       widget_guides = {
-        enabled = true,
+        enabled = false,
       },
       closing_tags = {
         highlight = "Comment",
         prefix = "// ",
-        enabled = true,
+        enabled = false,
       },
       dev_log = {
         enabled = true,
-        filter = nil,
-        focus_on_open = false,
-        open_cmd = "30split",
+        filter = function(log_line)
+          -- Allow all log lines to pass through, but could add filtering logic here
+          -- For example, to filter out verbose logs:
+          -- if log_line:match("%[VERBOSE%]") then return false end
+          return true
+        end,
+        notify_errors = false, -- if there is an error whilst running then notify the user
+        open_cmd = "30split", -- command to use to open the log buffer
+        focus_on_open = true, -- focus on the newly opened log window
       },
       dev_tools = {
         autostart = false,
@@ -105,6 +93,57 @@ return {
         },
       },
     },
+    config = function(_, opts)
+      require("flutter-tools").setup(opts)
+      
+      -- Enhance dev_log buffer with ANSI color support
+      local function setup_flutter_log_colors()
+        local bufname = vim.api.nvim_buf_get_name(0)
+        if bufname:match("__FLUTTER_DEV_LOG__") then
+          -- Enable ANSI color interpretation for Flutter logs
+          vim.bo.filetype = "log"
+          vim.bo.buftype = "nofile"
+          vim.bo.swapfile = false
+          vim.wo.wrap = false
+          vim.wo.number = false
+          vim.wo.relativenumber = false
+          
+          -- Set up highlight groups for common Flutter log levels
+          vim.api.nvim_set_hl(0, "FlutterLogError", { fg = "#f87171", bold = true })
+          vim.api.nvim_set_hl(0, "FlutterLogWarning", { fg = "#fbbf24", bold = true })
+          vim.api.nvim_set_hl(0, "FlutterLogInfo", { fg = "#60a5fa", bold = true })
+          vim.api.nvim_set_hl(0, "FlutterLogDebug", { fg = "#a3a3a3" })
+          vim.api.nvim_set_hl(0, "FlutterLogVerbose", { fg = "#6b7280" })
+          vim.api.nvim_set_hl(0, "FlutterLogSuccess", { fg = "#34d399", bold = true })
+          vim.api.nvim_set_hl(0, "FlutterLogTime", { fg = "#9ca3af", italic = true })
+          vim.api.nvim_set_hl(0, "FlutterLogDevice", { fg = "#8b5cf6", bold = true })
+          
+          -- Apply syntax highlighting for log levels and patterns
+          vim.fn.matchadd("FlutterLogError", "\\c\\[error\\]\\|\\cerror:\\|E/flutter")
+          vim.fn.matchadd("FlutterLogWarning", "\\c\\[warning\\]\\|\\cwarning:\\|W/flutter")
+          vim.fn.matchadd("FlutterLogInfo", "\\c\\[info\\]\\|\\cinfo:\\|I/flutter")
+          vim.fn.matchadd("FlutterLogDebug", "\\c\\[debug\\]\\|\\cdebug:\\|D/flutter")
+          vim.fn.matchadd("FlutterLogVerbose", "\\c\\[verbose\\]\\|\\cverbose:\\|V/flutter")
+          vim.fn.matchadd("FlutterLogSuccess", "\\c\\[success\\]\\|\\csuccess:\\|✓.*\\|Application finished")
+          vim.fn.matchadd("FlutterLogError", "\\c✗.*\\|\\cfailed.*\\|\\cexception\\|\\cassert.*failed")
+          vim.fn.matchadd("FlutterLogTime", "\\d\\d:\\d\\d:\\d\\d\\.\\d\\+")
+          vim.fn.matchadd("FlutterLogDevice", "\\[.*\\]\\s*\\(android\\|ios\\|web\\|macos\\|windows\\|linux\\)")
+          
+          -- Additional Flutter-specific patterns
+          vim.fn.matchadd("FlutterLogInfo", "\\cFlutter run key commands\\.")
+          vim.fn.matchadd("FlutterLogInfo", "\\cSyncing files to device")
+          vim.fn.matchadd("FlutterLogInfo", "\\cConnecting to VM Service")
+          vim.fn.matchadd("FlutterLogSuccess", "\\cApplication started")
+          vim.fn.matchadd("FlutterLogSuccess", "\\cReloaded.*in.*ms")
+          vim.fn.matchadd("FlutterLogSuccess", "\\cRestarted application")
+        end
+      end
+      
+      vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "BufWinEnter" }, {
+        pattern = "*",
+        callback = setup_flutter_log_colors,
+      })
+    end,
     keys = {
       -- Flutter group
       { "<leader>F", "", desc = "+flutter", mode = { "n", "v" } },
@@ -144,6 +183,27 @@ return {
             end
           end, 100)
         end, desc = "Flutter Log Toggle & Focus" },
+      { "<leader>Fk", function()
+          -- Toggle colorful log display
+          local log_win = vim.fn.bufwinnr("__FLUTTER_DEV_LOG__")
+          if log_win ~= -1 then
+            vim.cmd(log_win .. "wincmd w")
+            -- Re-apply syntax highlighting
+            vim.cmd("syntax clear")
+            vim.fn.matchadd("FlutterLogError", "\\c\\[error\\]\\|\\cerror:")
+            vim.fn.matchadd("FlutterLogWarning", "\\c\\[warning\\]\\|\\cwarning:")
+            vim.fn.matchadd("FlutterLogInfo", "\\c\\[info\\]\\|\\cinfo:")
+            vim.fn.matchadd("FlutterLogDebug", "\\c\\[debug\\]\\|\\cdebug:")
+            vim.fn.matchadd("FlutterLogDebug", "\\c\\[log\\]\\|\\cdebug:")
+            vim.fn.matchadd("FlutterLogVerbose", "\\c\\[verbose\\]\\|\\cverbose:")
+            vim.fn.matchadd("FlutterLogSuccess", "\\c\\[success\\]\\|\\csuccess:\\|✓")
+            vim.fn.matchadd("FlutterLogSuccess", "\\c✓.*")
+            vim.fn.matchadd("FlutterLogError", "\\c✗.*\\|\\cfailed.*\\|\\cerror.*")
+            vim.notify("Flutter log colors refreshed!", vim.log.levels.INFO)
+          else
+            vim.notify("Flutter log window not open", vim.log.levels.WARN)
+          end
+        end, desc = "Refresh Flutter Log Colors" },
       { "<leader>Fp", "<cmd>FlutterPubGet<cr>", desc = "Flutter Pub Get" },
       { "<leader>FP", "<cmd>FlutterPubUpgrade<cr>", desc = "Flutter Pub Upgrade" },
 
@@ -173,23 +233,6 @@ return {
             vim.notify("✗ Flutter executable not found at: " .. flutter_path, vim.log.levels.ERROR)
           end
         end, desc = "Verify Flutter Path" },
-      
-      -- Flutter debugging (requires DAP)
-      { "<leader>FD", function()
-          require("dap").toggle_breakpoint()
-        end, desc = "Toggle Breakpoint", ft = "dart" },
-      { "<leader>FC", function()
-          require("dap").continue()
-        end, desc = "Debug Continue", ft = "dart" },
-      { "<leader>FS", function()
-          require("dap").step_over()
-        end, desc = "Debug Step Over", ft = "dart" },
-      { "<leader>FI", function()
-          require("dap").step_into()
-        end, desc = "Debug Step Into", ft = "dart" },
-      { "<leader>FO", function()
-          require("dap").step_out()
-        end, desc = "Debug Step Out", ft = "dart" },
     },
   },
 }
