@@ -121,7 +121,7 @@ return {
           -- Apply syntax highlighting for log levels and patterns
           vim.fn.matchadd("FlutterLogError", "\\c\\[error\\]\\|\\cerror:\\|E/flutter")
           vim.fn.matchadd("FlutterLogWarning", "\\c\\[warning\\]\\|\\cwarning:\\|W/flutter")
-          vim.fn.matchadd("FlutterLogInfo", "\\c\\[info\\]\\|\\cinfo:\\|I/flutter")
+          vim.fn.matchadd("FlutterLogInfo", "\\c\\[info\\]\\|\\cinfo:\\|I/flutter\\|flutter:")
           vim.fn.matchadd("FlutterLogDebug", "\\c\\[debug\\]\\|\\cdebug:\\|D/flutter")
           vim.fn.matchadd("FlutterLogVerbose", "\\c\\[verbose\\]\\|\\cverbose:\\|V/flutter")
           vim.fn.matchadd("FlutterLogSuccess", "\\c\\[success\\]\\|\\csuccess:\\|✓.*\\|Application finished")
@@ -136,6 +136,9 @@ return {
           vim.fn.matchadd("FlutterLogSuccess", "\\cApplication started")
           vim.fn.matchadd("FlutterLogSuccess", "\\cReloaded.*in.*ms")
           vim.fn.matchadd("FlutterLogSuccess", "\\cRestarted application")
+          -- add entry to color anyline that has [log] in it by yellow (debug, warning)
+          vim.fn.matchadd("FlutterLogDebug", "\\c\\[log\\]\\|\\cdebug:\\|D/flutter") -- does this line color anything that has [log] in it by yellow?
+          vim.fn.matchadd("FlutterLogWarning", "\\c\\[log\\]\\|\\cwarning:\\|W/flutter")
         end
       end
       
@@ -194,7 +197,6 @@ return {
             vim.fn.matchadd("FlutterLogWarning", "\\c\\[warning\\]\\|\\cwarning:")
             vim.fn.matchadd("FlutterLogInfo", "\\c\\[info\\]\\|\\cinfo:")
             vim.fn.matchadd("FlutterLogDebug", "\\c\\[debug\\]\\|\\cdebug:")
-            vim.fn.matchadd("FlutterLogDebug", "\\c\\[log\\]\\|\\cdebug:")
             vim.fn.matchadd("FlutterLogVerbose", "\\c\\[verbose\\]\\|\\cverbose:")
             vim.fn.matchadd("FlutterLogSuccess", "\\c\\[success\\]\\|\\csuccess:\\|✓")
             vim.fn.matchadd("FlutterLogSuccess", "\\c✓.*")
