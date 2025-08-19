@@ -21,6 +21,8 @@ require("lazy").setup({
     -- import LazyVim extras
     { import = "lazyvim.plugins.extras.ai.copilot" },
     { import = "lazyvim.plugins.extras.ai.copilot-chat" },
+    -- Uncomment the line below if you want debugging support with nvim-dap
+    -- { import = "lazyvim.plugins.extras.dap.core" },
     -- import/override with your plugins
     { import = "plugins" },
   },

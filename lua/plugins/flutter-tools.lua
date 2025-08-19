@@ -21,7 +21,75 @@ return {
       "FlutterReanalyze",
     },
     ft = "dart",
-    opts = {},
+    opts = {
+      ui = {
+        border = "rounded",
+        notification_style = "nvim-notify",
+      },
+      decorations = {
+        statusline = {
+          app_version = true,
+          device = true,
+          project_config = true,
+        },
+      },
+      debugger = {
+        enabled = true, -- Enable debugger now that nvim-dap is available
+        run_via_dap = true, -- Use nvim-dap for debugging
+        exception_breakpoints = {},
+        evaluate_to_string_in_debug_views = true,
+      },
+      flutter_path = nil, -- Path to flutter executable (auto-detected if nil)
+      flutter_lookup_cmd = nil, -- Command to find flutter executable
+      root_patterns = { ".git", "pubspec.yaml" },
+      fvm = false, -- Use FVM if true
+      widget_guides = {
+        enabled = true,
+      },
+      closing_tags = {
+        highlight = "Comment",
+        prefix = "// ",
+        enabled = true,
+      },
+      dev_log = {
+        enabled = true,
+        filter = nil, -- optional callback to filter log lines
+        focus_on_open = false, -- focus on log window when opened
+        open_cmd = "30split", -- command to open log window
+      },
+      dev_tools = {
+        autostart = false, -- auto start dev tools server
+        auto_open_browser = false, -- auto open browser when dev tools starts
+      },
+      outline = {
+        open_cmd = "30vnew", -- command to open outline window
+        auto_open = false, -- auto open outline window on start
+      },
+      lsp = {
+        color = {
+          enabled = true, -- Enable color support
+          background = false, -- background color support
+          background_color = nil, -- background color
+          foreground = false, -- foreground color support
+          virtual_text = true, -- virtual text color support
+          virtual_text_str = " ■", -- virtual text string
+        },
+        on_attach = nil, -- custom on_attach function
+        capabilities = nil, -- custom capabilities
+        settings = {
+          showTodos = true,
+          completeFunctionCalls = true,
+          analysisExcludedFolders = {
+            vim.fn.expand("$HOME/.pub-cache"),
+            vim.fn.expand("$HOME/AppData/Local/Pub/Cache"),
+            vim.fn.expand("$HOME/.cache/pub"),
+          },
+          renameFilesWithClasses = "prompt",
+          enableSnippets = true,
+          updateImportsOnRename = true,
+        },
+      },
+    },
     keys = {
       -- Flutter group
       { "<leader>F", "", desc = "+flutter", mode = { "n", "v" } },
@@ -43,6 +111,16 @@ return {
       -- Flutter commands
       { "<leader>Fc", "<cmd>FlutterLogClear<cr>", desc = "Flutter Log Clear" },
       { "<leader>Fl", "<cmd>FlutterLogToggle<cr>", desc = "Flutter Log Toggle" },
+      { "<leader>FL", function() 
+          vim.cmd("FlutterLogToggle") 
+          vim.defer_fn(function()
+            local log_win = vim.fn.bufwinnr("__FLUTTER_DEV_LOG__")
+            if log_win ~= -1 then
+              vim.cmd(log_win .. "wincmd w")
+              vim.cmd("normal! G") -- Go to bottom
+            end
+          end, 100)
+        end, desc = "Flutter Log Toggle & Focus" },
       { "<leader>Fp", "<cmd>FlutterPubGet<cr>", desc = "Flutter Pub Get" },
       { "<leader>FP", "<cmd>FlutterPubUpgrade<cr>", desc = "Flutter Pub Upgrade" },
 
@@ -53,6 +131,28 @@ return {
       -- Flutter LSP shortcuts
       { "<leader>Fs", "<cmd>FlutterSuper<cr>", desc = "Flutter Go to Super" },
       { "<leader>Fi", "<cmd>FlutterReanalyze<cr>", desc = "Flutter Reanalyze" },
+      
+      -- Flutter development tools
+      { "<leader>Ft", "<cmd>FlutterDevTools<cr>", desc = "Flutter Dev Tools" },
+      { "<leader>Fb", "<cmd>FlutterDetach<cr>", desc = "Flutter Detach" },
+      { "<leader>FA", "<cmd>FlutterRename<cr>", desc = "Flutter Rename" },
+      
+      -- Flutter debugging (requires DAP)
+      { "<leader>FD", function()
+          require("dap").toggle_breakpoint()
+        end, desc = "Toggle Breakpoint", ft = "dart" },
+      { "<leader>FC", function()
+          require("dap").continue()
+        end, desc = "Debug Continue", ft = "dart" },
+      { "<leader>FS", function()
+          require("dap").step_over()
+        end, desc = "Debug Step Over", ft = "dart" },
+      { "<leader>FI", function()
+          require("dap").step_into()
+        end, desc = "Debug Step Into", ft = "dart" },
+      { "<leader>FO", function()
+          require("dap").step_out()
+        end, desc = "Debug Step Out", ft = "dart" },
     },
   },
 }
