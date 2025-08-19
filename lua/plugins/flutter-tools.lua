@@ -34,15 +34,30 @@ return {
         },
       },
       debugger = {
-        enabled = true, -- Enable debugger now that nvim-dap is available
-        run_via_dap = true, -- Use nvim-dap for debugging
+        enabled = true,
+        run_via_dap = true,
         exception_breakpoints = {},
         evaluate_to_string_in_debug_views = true,
+        register_configurations = function(paths)
+          -- Add custom debug configurations if needed
+          require("dap").configurations.dart = {
+            {
+              type = "dart",
+              request = "launch",
+              name = "Launch Flutter",
+              dartSdkPath = paths.dart_sdk,
+              flutterSdkPath = paths.flutter_sdk,
+              program = "${workspaceFolder}/lib/main.dart",
+              cwd = "${workspaceFolder}",
+              -- args = {"--flavor", "development"}
+            }
+          }
+        end,
       },
-      flutter_path = nil, -- Path to flutter executable (auto-detected if nil)
-      flutter_lookup_cmd = nil, -- Command to find flutter executable
+      flutter_path = "/Users/mtech/development/flutter/bin/flutter", -- Explicit path to prevent duplication
+      flutter_lookup_cmd = nil, -- Don't use lookup since we have explicit path
       root_patterns = { ".git", "pubspec.yaml" },
-      fvm = false, -- Use FVM if true
+      fvm = false, -- Set to true if you use Flutter Version Management
       widget_guides = {
         enabled = true,
       },
@@ -53,17 +68,17 @@ return {
       },
       dev_log = {
         enabled = true,
-        filter = nil, -- optional callback to filter log lines
-        focus_on_open = false, -- focus on log window when opened
-        open_cmd = "30split", -- command to open log window
+        filter = nil,
+        focus_on_open = false,
+        open_cmd = "30split",
       },
       dev_tools = {
-        autostart = false, -- auto start dev tools server
-        auto_open_browser = false, -- auto open browser when dev tools starts
+        autostart = false,
+        auto_open_browser = false,
       },
       outline = {
-        open_cmd = "30vnew", -- command to open outline window
-        auto_open = false, -- auto open outline window on start
+        open_cmd = "30vnew",
+        auto_open = false,
       },
       lsp = {
         color = {
@@ -99,6 +114,14 @@ return {
       { "<leader>Fq", "<cmd>FlutterQuit<cr>", desc = "Flutter Quit" },
       { "<leader>FR", "<cmd>FlutterRestart<cr>", desc = "Flutter Restart" },
       { "<leader>Fh", "<cmd>FlutterReload<cr>", desc = "Flutter Hot Reload" },
+      
+      -- Alternative run commands for troubleshooting
+      { "<leader>FRR", function()
+          vim.cmd("FlutterQuit")
+          vim.defer_fn(function()
+            vim.cmd("FlutterRun")
+          end, 1000)
+        end, desc = "Flutter Force Restart" },
 
       -- Flutter devices and emulators
       { "<leader>Fd", "<cmd>FlutterDevices<cr>", desc = "Flutter Devices" },
@@ -136,6 +159,20 @@ return {
       { "<leader>Ft", "<cmd>FlutterDevTools<cr>", desc = "Flutter Dev Tools" },
       { "<leader>Fb", "<cmd>FlutterDetach<cr>", desc = "Flutter Detach" },
       { "<leader>FA", "<cmd>FlutterRename<cr>", desc = "Flutter Rename" },
+      
+      -- Flutter path verification
+      { "<leader>FV", function()
+          local flutter_path = "/Users/mtech/development/flutter/bin/flutter"
+          vim.notify("Flutter path: " .. flutter_path, vim.log.levels.INFO)
+          -- Test if the path exists
+          local handle = io.open(flutter_path, "r")
+          if handle then
+            handle:close()
+            vim.notify("✓ Flutter executable found!", vim.log.levels.INFO)
+          else
+            vim.notify("✗ Flutter executable not found at: " .. flutter_path, vim.log.levels.ERROR)
+          end
+        end, desc = "Verify Flutter Path" },
       
       -- Flutter debugging (requires DAP)
       { "<leader>FD", function()
